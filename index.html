@@ -54,9 +54,10 @@
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 10px 18px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border); }
         th.r, td.r { text-align: right; }
-        td { padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        td { padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-variant-numeric: tabular-nums; }
         tr:last-child td { border-bottom: none; }
         tr:hover { background: rgba(59,130,246,0.04); }
+        .leaderboard-table { table-layout: fixed; }
         .rank { font-weight: 700; width: 36px; }
         .rank.gold { color: var(--gold); } .rank.silver { color: var(--silver); } .rank.bronze { color: var(--bronze); }
         .rep-name { font-weight: 600; }
@@ -170,11 +171,11 @@
                 <button class="sort-btn" data-sort="won">By Deals Won</button>
                 <button class="sort-btn" data-sort="winRate">By Win Rate</button>
                 <button class="sort-btn" data-sort="avgDeal">By Avg Deal</button>
-                <button class="sort-btn" data-sort="avgDays">By Speed</button>
+                <button class="sort-btn" data-sort="avgDays">By Close Speed</button>
             </div>
-            <table><thead><tr>
-                <th>#</th><th>Rep</th><th class="r">Won</th><th class="r">Lost</th><th class="r">Open</th>
-                <th class="r">Revenue</th><th class="r">Avg Deal</th><th class="r">Avg Days</th><th>Win Rate</th>
+            <table class="leaderboard-table"><thead><tr>
+                <th style="width:40px">#</th><th style="width:180px">Rep</th><th class="r" style="width:70px">Won</th><th class="r" style="width:70px">Lost</th><th class="r" style="width:70px">Open</th>
+                <th class="r" style="width:110px">Revenue</th><th class="r" style="width:100px">Avg Deal</th><th class="r" style="width:100px">Close Speed</th><th style="width:140px">Win Rate</th>
             </tr></thead><tbody id="lb-body"></tbody></table>
         </div>
 
