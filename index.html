@@ -189,7 +189,7 @@
             <div class="section-header"><h2>Lead Source Performance</h2></div>
             <table><thead><tr>
                 <th>Source</th><th class="r">Total</th><th class="r">Won</th><th class="r">Lost</th>
-                <th class="r">Revenue</th><th class="r">Avg Deal</th><th>Win Rate</th><th>Volume</th>
+                <th class="r">Revenue</th><th class="r">Avg Deal</th><th>Win Rate</th><th>% of Flow</th>
             </tr></thead><tbody id="source-body"></tbody></table>
         </div>
 
@@ -396,17 +396,18 @@
             return {name:k,...v,winRate:Math.round(wr*10)/10,avgDeal:avg};
         }).filter(s => s.total >= 3).sort((a,b) => b.rev - a.rev);
 
-        const maxTotal = Math.max(...list.map(s=>s.total),1);
+        const grandTotal = list.reduce((a,s) => a + s.total, 0) || 1;
         let h = '';
         list.slice(0,20).forEach(s => {
             const wc = wrColor(s.winRate);
-            const bw = Math.max((s.total/maxTotal)*120, 2);
+            const pctOfFlow = ((s.total / grandTotal) * 100).toFixed(1);
+            const bw = Math.max(parseFloat(pctOfFlow) * 1.5, 2);
             h += `<tr>
                 <td style="font-weight:600">${s.name}</td><td class="r">${s.total}</td>
                 <td class="r green">${s.won}</td><td class="r red">${s.lost}</td>
                 <td class="r revenue">${fc(s.rev)}</td><td class="r">${fc(s.avgDeal)}</td>
                 <td><div class="wr"><div class="bar"><div class="fill" style="width:${s.winRate}%;background:${wc}"></div></div><div class="pct" style="color:${wc}">${s.winRate}%</div></div></td>
-                <td><div class="source-bar"><div class="bar" style="width:${bw}px"></div><div class="count">${s.total}</div></div></td>
+                <td><div class="source-bar"><div class="bar" style="width:${bw}px"></div><div class="count">${pctOfFlow}%</div></div></td>
             </tr>`;
         });
         document.getElementById('source-body').innerHTML = h;
