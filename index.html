@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oasis Turf — Sales Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e4e4e7;
+            --muted: #8b8d98; --accent: #3b82f6; --green: #22c55e; --red: #ef4444;
+            --orange: #f59e0b; --purple: #a855f7; --gold: #fbbf24; --silver: #94a3b8; --bronze: #d97706;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* Header */
+        .header { background: linear-gradient(135deg, #1a1d27, #252836); border-bottom: 1px solid var(--border); padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 22px; font-weight: 700; background: linear-gradient(135deg, #3b82f6, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+        .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .timestamp { color: var(--muted); font-size: 11px; }
+
+        /* Date Filter */
+        .date-filters { display: flex; gap: 4px; background: var(--bg); border-radius: 8px; padding: 3px; }
+        .date-btn { padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: inherit; font-weight: 500; }
+        .date-btn.active { background: var(--accent); color: white; }
+        .date-btn:hover:not(.active) { background: rgba(255,255,255,0.06); }
+
+        .container { max-width: 1440px; margin: 0 auto; padding: 20px; }
+
+        /* KPI */
+        .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+        .kpi-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+        .kpi-card .value { font-size: 26px; font-weight: 700; }
+        .kpi-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .green { color: var(--green); } .red { color: var(--red); } .accent { color: var(--accent); }
+        .orange { color: var(--orange); } .purple { color: var(--purple); }
+
+        /* Nav Tabs */
+        .nav-tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--card); border-radius: 10px; padding: 4px; border: 1px solid var(--border); overflow-x: auto; }
+        .nav-tab { padding: 10px 20px; border-radius: 8px; font-size: 13px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: inherit; font-weight: 500; white-space: nowrap; }
+        .nav-tab.active { background: var(--accent); color: white; }
+        .nav-tab:hover:not(.active) { background: rgba(255,255,255,0.04); color: var(--text); }
+
+        /* Sections */
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; display: none; }
+        .section.active { display: block; }
+        .section-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .section-header h2 { font-size: 15px; font-weight: 600; }
+        .badge { background: var(--accent); color: white; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+        /* Leaderboard Table */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 10px 18px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border); }
+        th.r, td.r { text-align: right; }
+        td { padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: rgba(59,130,246,0.04); }
+        .rank { font-weight: 700; width: 36px; }
+        .rank.gold { color: var(--gold); } .rank.silver { color: var(--silver); } .rank.bronze { color: var(--bronze); }
+        .rep-name { font-weight: 600; }
+        .revenue { font-weight: 700; color: var(--green); font-variant-numeric: tabular-nums; }
+
+        /* Sort tabs */
+        .sort-tabs { display: flex; gap: 4px; padding: 6px 18px; border-bottom: 1px solid var(--border); }
+        .sort-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--muted); border: none; background: none; font-family: inherit; }
+        .sort-btn.active { background: rgba(59,130,246,0.15); color: var(--accent); font-weight: 600; }
+
+        /* Win rate bar */
+        .wr { display: flex; align-items: center; gap: 6px; }
+        .wr .bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; max-width: 70px; }
+        .wr .bar .fill { height: 100%; border-radius: 3px; }
+        .wr .pct { font-size: 12px; font-weight: 600; min-width: 40px; text-align: right; }
+
+        /* Pipeline cards */
+        .pipe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; padding: 18px; }
+        .pipe-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+        .pipe-card h3 { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .pipe-card .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+        .stat-row .lbl { color: var(--muted); } .stat-row .val { font-weight: 600; }
+
+        /* Source table */
+        .source-bar { display: flex; align-items: center; gap: 8px; }
+        .source-bar .bar { height: 6px; border-radius: 3px; background: var(--accent); min-width: 2px; }
+        .source-bar .count { font-size: 12px; color: var(--muted); min-width: 30px; }
+
+        /* Monthly chart */
+        .chart-area { padding: 18px; }
+        .month-bars { display: flex; align-items: flex-end; gap: 3px; height: 200px; }
+        .m-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+        .m-col .bar { width: 80%; max-width: 36px; border-radius: 3px 3px 0 0; min-height: 2px; cursor: pointer; position: relative; }
+        .m-col .bar:hover { opacity: 0.8; }
+        .m-col .bar.won { background: var(--green); }
+        .m-col .bar.rev { background: var(--accent); }
+        .m-col .lbl { font-size: 9px; color: var(--muted); margin-top: 6px; transform: rotate(-45deg); white-space: nowrap; }
+        .m-col .val { font-size: 8px; color: var(--muted); margin-bottom: 2px; }
+
+        /* Funnel */
+        .funnel { padding: 18px; }
+        .funnel-step { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .funnel-step .stage-name { width: 200px; font-size: 12px; text-align: right; color: var(--muted); }
+        .funnel-step .bar-wrap { flex: 1; height: 28px; background: var(--bg); border-radius: 4px; overflow: hidden; position: relative; }
+        .funnel-step .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: white; min-width: fit-content; }
+        .funnel-step .conv { width: 60px; font-size: 11px; color: var(--muted); text-align: right; }
+
+        /* Speed to close */
+        .speed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; padding: 18px; }
+        .speed-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+        .speed-card .big { font-size: 36px; font-weight: 700; color: var(--accent); }
+        .speed-card .unit { font-size: 12px; color: var(--muted); }
+        .speed-card .desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+        /* Stale deals */
+        .stale-alert { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 12px 16px; margin: 18px; }
+        .stale-alert h3 { font-size: 13px; color: var(--red); margin-bottom: 8px; }
+        .stale-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+        .stale-item .days { color: var(--red); font-weight: 600; }
+
+        .footer { text-align: center; padding: 20px; color: var(--muted); font-size: 11px; }
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        @media (max-width: 768px) {
+            .header { padding: 14px; } .container { padding: 10px; }
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
+            .pipe-grid { grid-template-columns: 1fr; }
+            td, th { padding: 8px 10px; }
+            .funnel-step .stage-name { width: 120px; font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Oasis Turf & Hardscaping</h1>
+            <div class="subtitle">Sales Performance Dashboard</div>
+        </div>
+        <div class="header-right">
+            <div class="date-filters" id="date-filters">
+                <button class="date-btn active" data-range="all">All Time</button>
+                <button class="date-btn" data-range="2025">2025</button>
+                <button class="date-btn" data-range="2026">2026 YTD</button>
+                <button class="date-btn" data-range="q1-2026">Q1 2026</button>
+                <button class="date-btn" data-range="30d">Last 30d</button>
+                <button class="date-btn" data-range="7d">Last 7d</button>
+            </div>
+            <div class="timestamp" id="timestamp"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="kpi-row" id="kpi-row"></div>
+
+        <div class="nav-tabs" id="nav-tabs">
+            <button class="nav-tab active" data-tab="leaderboard">Leaderboard</button>
+            <button class="nav-tab" data-tab="pipelines">Pipelines</button>
+            <button class="nav-tab" data-tab="sources">Lead Sources</button>
+            <button class="nav-tab" data-tab="monthly">Monthly Trends</button>
+            <button class="nav-tab" data-tab="funnel">Stage Funnel</button>
+            <button class="nav-tab" data-tab="speed">Speed to Close</button>
+            <button class="nav-tab" data-tab="stale">Follow-Up Alerts</button>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="section active" id="sec-leaderboard">
+            <div class="section-header"><h2>Sales Leaderboard</h2><span class="badge" id="rep-count"></span></div>
+            <div class="sort-tabs">
+                <button class="sort-btn active" data-sort="revenue_won">By Revenue</button>
+                <button class="sort-btn" data-sort="won">By Deals Won</button>
+                <button class="sort-btn" data-sort="winRate">By Win Rate</button>
+                <button class="sort-btn" data-sort="avgDeal">By Avg Deal</button>
+                <button class="sort-btn" data-sort="avgDays">By Speed</button>
+            </div>
+            <table><thead><tr>
+                <th>#</th><th>Rep</th><th class="r">Won</th><th class="r">Lost</th><th class="r">Open</th>
+                <th class="r">Revenue</th><th class="r">Avg Deal</th><th class="r">Avg Days</th><th>Win Rate</th>
+            </tr></thead><tbody id="lb-body"></tbody></table>
+        </div>
+
+        <!-- Pipelines -->
+        <div class="section" id="sec-pipelines">
+            <div class="section-header"><h2>Pipeline Breakdown</h2></div>
+            <div class="pipe-grid" id="pipe-grid"></div>
+        </div>
+
+        <!-- Lead Sources -->
+        <div class="section" id="sec-sources">
+            <div class="section-header"><h2>Lead Source Performance</h2></div>
+            <table><thead><tr>
+                <th>Source</th><th class="r">Total</th><th class="r">Won</th><th class="r">Lost</th>
+                <th class="r">Revenue</th><th class="r">Avg Deal</th><th>Win Rate</th><th>Volume</th>
+            </tr></thead><tbody id="source-body"></tbody></table>
+        </div>
+
+        <!-- Monthly -->
+        <div class="section" id="sec-monthly">
+            <div class="section-header"><h2>Monthly Revenue Trends</h2></div>
+            <div class="chart-area" id="monthly-chart"></div>
+        </div>
+
+        <!-- Funnel -->
+        <div class="section" id="sec-funnel">
+            <div class="section-header"><h2>Stage Funnel — California Lead Flow</h2></div>
+            <div class="funnel" id="funnel-area"></div>
+        </div>
+
+        <!-- Speed -->
+        <div class="section" id="sec-speed">
+            <div class="section-header"><h2>Speed to Close</h2></div>
+            <div class="speed-grid" id="speed-grid"></div>
+            <table><thead><tr>
+                <th>Rep</th><th class="r">Avg Days</th><th class="r">Fastest</th><th class="r">Slowest</th><th class="r">Deals</th>
+            </tr></thead><tbody id="speed-body"></tbody></table>
+        </div>
+
+        <!-- Stale -->
+        <div class="section" id="sec-stale">
+            <div class="section-header"><h2>Follow-Up Alerts</h2><span class="badge red" id="stale-count" style="background:var(--red)"></span></div>
+            <div id="stale-area"></div>
+        </div>
+    </div>
+
+    <div class="footer">Powered by <a href="https://agmprotools.com" target="_blank" rel="noopener">AGM Pro Tools</a></div>
+
+    <script>
+    let RAW = null;
+    let filtered = [];
+    let currentSort = 'revenue_won';
+    let currentTab = 'leaderboard';
+
+    async function loadData() {
+        const r = await fetch('data.json');
+        RAW = await r.json();
+        document.getElementById('timestamp').textContent = 'Updated: ' + new Date(RAW.generated_at).toLocaleString();
+        applyDateFilter('all');
+    }
+
+    function fc(n) { return n >= 1e6 ? '$'+(n/1e6).toFixed(1)+'M' : n >= 1e3 ? '$'+(n/1e3).toFixed(0)+'K' : '$'+Math.round(n).toLocaleString(); }
+    function fn(n) { return n.toLocaleString(); }
+    function wrColor(r) { return r >= 35 ? '#22c55e' : r >= 25 ? '#f59e0b' : '#ef4444'; }
+
+    function applyDateFilter(range) {
+        const now = new Date();
+        let start = null, end = null;
+        if (range === '2025') { start = '2025-01-01'; end = '2025-12-31'; }
+        else if (range === '2026') { start = '2026-01-01'; end = '2026-12-31'; }
+        else if (range === 'q1-2026') { start = '2026-01-01'; end = '2026-03-31'; }
+        else if (range === '30d') { const d = new Date(now - 30*86400000); start = d.toISOString().slice(0,10); }
+        else if (range === '7d') { const d = new Date(now - 7*86400000); start = d.toISOString().slice(0,10); }
+
+        filtered = RAW.opportunities.filter(o => {
+            if (!o.created) return range === 'all';
+            if (start && o.created < start) return false;
+            if (end && o.created > end) return false;
+            return true;
+        });
+        renderAll();
+    }
+
+    function agg() {
+        const reps = {}, sources = {}, months = {}, stages = {};
+        let totalWon=0, totalLost=0, totalOpen=0, totalRev=0;
+
+        filtered.forEach(o => {
+            const uid = o.assignedTo || 'unassigned';
+            const name = (o.assignedTo && RAW.users[o.assignedTo]) || (uid === 'unassigned' ? 'Unassigned' : uid.slice(0,8));
+
+            if (!reps[uid]) reps[uid] = {name, won:0, lost:0, open:0, total:0, rev:0, revOpen:0, days:[], deals:[]};
+            reps[uid][o.status]++;
+            reps[uid].total++;
+            if (o.status==='won') { reps[uid].rev += o.value; totalWon++; totalRev += o.value; }
+            else if (o.status==='lost') totalLost++;
+            else if (o.status==='open') { reps[uid].revOpen += o.value; totalOpen++; }
+            if (o.days !== null && o.status === 'won') reps[uid].days.push(o.days);
+            if (o.status === 'won') reps[uid].deals.push(o.value);
+
+            // Sources
+            const src = o.source || 'Unknown';
+            if (!sources[src]) sources[src] = {won:0, lost:0, open:0, total:0, rev:0, deals:[]};
+            sources[src][o.status]++;
+            sources[src].total++;
+            if (o.status==='won') { sources[src].rev += o.value; sources[src].deals.push(o.value); }
+
+            // Monthly
+            if (o.created) {
+                const m = o.created.slice(0,7);
+                if (!months[m]) months[m] = {won:0, lost:0, new:0, rev:0};
+                months[m].new++;
+                if (o.status==='won') { months[m].won++; months[m].rev += o.value; }
+                else if (o.status==='lost') months[m].lost++;
+            }
+
+            // Stages (California only for funnel)
+            if (o.pipelineId === 'rutOS5wXeybxHIk1N13E') {
+                if (!stages[o.stage]) stages[o.stage] = {count:0, pos: o.stagePos};
+                stages[o.stage].count++;
+            }
+        });
+
+        return {reps, sources, months, stages, totalWon, totalLost, totalOpen, totalRev, total: filtered.length};
+    }
+
+    function renderAll() {
+        const d = agg();
+        renderKPIs(d);
+        renderLeaderboard(d);
+        renderPipelines(d);
+        renderSources(d);
+        renderMonthly(d);
+        renderFunnel(d);
+        renderSpeed(d);
+        renderStale();
+    }
+
+    function renderKPIs(d) {
+        const avgDeal = d.totalWon > 0 ? d.totalRev / d.totalWon : 0;
+        const wr = (d.totalWon+d.totalLost) > 0 ? (d.totalWon/(d.totalWon+d.totalLost)*100).toFixed(1) : '0';
+        document.getElementById('kpi-row').innerHTML = `
+            <div class="kpi-card"><div class="label">Total Opportunities</div><div class="value accent">${fn(d.total)}</div></div>
+            <div class="kpi-card"><div class="label">Deals Won</div><div class="value green">${fn(d.totalWon)}</div></div>
+            <div class="kpi-card"><div class="label">Revenue Won</div><div class="value green">${fc(d.totalRev)}</div></div>
+            <div class="kpi-card"><div class="label">Open Pipeline</div><div class="value orange">${fn(d.totalOpen)}</div></div>
+            <div class="kpi-card"><div class="label">Win Rate</div><div class="value purple">${wr}%</div></div>
+            <div class="kpi-card"><div class="label">Avg Deal Size</div><div class="value accent">${fc(avgDeal)}</div></div>
+            <div class="kpi-card"><div class="label">Deals Lost</div><div class="value red">${fn(d.totalLost)}</div></div>
+        `;
+    }
+
+    function renderLeaderboard(d) {
+        let list = Object.entries(d.reps)
+            .filter(([k,v]) => k !== 'unassigned' && v.total >= 3 && v.name.length > 8)
+            .map(([k,v]) => {
+                const closed = v.won + v.lost;
+                const wr = closed > 0 ? (v.won/closed*100) : 0;
+                const avgDeal = v.won > 0 ? v.rev/v.won : 0;
+                const avgDays = v.days.length > 0 ? v.days.reduce((a,b)=>a+b,0)/v.days.length : null;
+                return {...v, id:k, winRate: Math.round(wr*10)/10, avgDeal, avgDays};
+            });
+
+        if (currentSort === 'avgDays') list.sort((a,b) => (a.avgDays||999) - (b.avgDays||999));
+        else if (currentSort === 'avgDeal') list.sort((a,b) => b.avgDeal - a.avgDeal);
+        else if (currentSort === 'winRate') list.sort((a,b) => b.winRate - a.winRate);
+        else if (currentSort === 'won') list.sort((a,b) => b.won - a.won);
+        else list.sort((a,b) => b.rev - a.rev);
+
+        document.getElementById('rep-count').textContent = list.length + ' reps';
+        const top = list.slice(0, 25);
+        let h = '';
+        top.forEach((r, i) => {
+            const rk = i+1;
+            const rc = rk===1?'gold':rk===2?'silver':rk===3?'bronze':'';
+            const medal = rk===1?'🥇':rk===2?'🥈':rk===3?'🥉':rk;
+            const wc = wrColor(r.winRate);
+            const days = r.avgDays !== null ? Math.round(r.avgDays)+'d' : '—';
+            h += `<tr>
+                <td class="rank ${rc}">${medal}</td><td class="rep-name">${r.name}</td>
+                <td class="r">${r.won}</td><td class="r red">${r.lost}</td><td class="r orange">${r.open}</td>
+                <td class="r revenue">${fc(r.rev)}</td><td class="r">${fc(r.avgDeal)}</td><td class="r">${days}</td>
+                <td><div class="wr"><div class="bar"><div class="fill" style="width:${r.winRate}%;background:${wc}"></div></div><div class="pct" style="color:${wc}">${r.winRate}%</div></div></td>
+            </tr>`;
+        });
+        document.getElementById('lb-body').innerHTML = h;
+    }
+
+    function renderPipelines(d) {
+        const colors = {'California':'#3b82f6','Dallas':'#a855f7','Las Vegas':'#f59e0b'};
+        const regions = {};
+        filtered.forEach(o => {
+            const r = o.region;
+            if (!regions[r]) regions[r] = {won:0,lost:0,open:0,total:0,rev:0};
+            regions[r][o.status]++;
+            regions[r].total++;
+            if (o.status==='won') regions[r].rev += o.value;
+        });
+        let h = '';
+        for (const [r, p] of Object.entries(regions)) {
+            const wr = (p.won+p.lost)>0?((p.won/(p.won+p.lost))*100).toFixed(1):'0';
+            h += `<div class="pipe-card"><h3><span class="dot" style="background:${colors[r]||'#3b82f6'}"></span>${r}</h3>
+                <div class="stat-row"><span class="lbl">Total</span><span class="val">${fn(p.total)}</span></div>
+                <div class="stat-row"><span class="lbl">Won</span><span class="val green">${fn(p.won)}</span></div>
+                <div class="stat-row"><span class="lbl">Lost</span><span class="val red">${fn(p.lost)}</span></div>
+                <div class="stat-row"><span class="lbl">Open</span><span class="val orange">${fn(p.open)}</span></div>
+                <div class="stat-row"><span class="lbl">Revenue</span><span class="val green">${fc(p.rev)}</span></div>
+                <div class="stat-row"><span class="lbl">Win Rate</span><span class="val">${wr}%</span></div>
+            </div>`;
+        }
+        document.getElementById('pipe-grid').innerHTML = h;
+    }
+
+    function renderSources(d) {
+        let list = Object.entries(d.sources).map(([k,v]) => {
+            const closed = v.won+v.lost;
+            const wr = closed>0?(v.won/closed*100):0;
+            const avg = v.won>0?v.rev/v.won:0;
+            return {name:k,...v,winRate:Math.round(wr*10)/10,avgDeal:avg};
+        }).filter(s => s.total >= 3).sort((a,b) => b.rev - a.rev);
+
+        const maxTotal = Math.max(...list.map(s=>s.total),1);
+        let h = '';
+        list.slice(0,20).forEach(s => {
+            const wc = wrColor(s.winRate);
+            const bw = Math.max((s.total/maxTotal)*120, 2);
+            h += `<tr>
+                <td style="font-weight:600">${s.name}</td><td class="r">${s.total}</td>
+                <td class="r green">${s.won}</td><td class="r red">${s.lost}</td>
+                <td class="r revenue">${fc(s.rev)}</td><td class="r">${fc(s.avgDeal)}</td>
+                <td><div class="wr"><div class="bar"><div class="fill" style="width:${s.winRate}%;background:${wc}"></div></div><div class="pct" style="color:${wc}">${s.winRate}%</div></div></td>
+                <td><div class="source-bar"><div class="bar" style="width:${bw}px"></div><div class="count">${s.total}</div></div></td>
+            </tr>`;
+        });
+        document.getElementById('source-body').innerHTML = h;
+    }
+
+    function renderMonthly(d) {
+        const months = Object.keys(d.months).sort().slice(-18);
+        if (!months.length) return;
+        const maxRev = Math.max(...months.map(m=>d.months[m].rev),1);
+        let h = '<div class="month-bars">';
+        months.forEach(m => {
+            const v = d.months[m];
+            const ht = Math.max((v.rev/maxRev)*170, 2);
+            const lbl = new Date(m+'-01').toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+            h += `<div class="m-col"><div class="val">${v.rev>0?fc(v.rev):''}</div>
+                <div class="bar rev" style="height:${ht}px" title="${lbl}: ${fc(v.rev)} (${v.won} won)"></div>
+                <div class="lbl">${lbl}</div></div>`;
+        });
+        h += '</div>';
+        document.getElementById('monthly-chart').innerHTML = h;
+    }
+
+    function renderFunnel(d) {
+        const pid = 'rutOS5wXeybxHIk1N13E'; // California
+        const meta = RAW.pipelines[pid];
+        if (!meta) return;
+
+        const stageCounts = {};
+        filtered.filter(o => o.pipelineId === pid).forEach(o => {
+            stageCounts[o.stage] = (stageCounts[o.stage]||0) + 1;
+        });
+
+        const stages = meta.stages.filter(s => stageCounts[s.name]);
+        const maxCount = Math.max(...stages.map(s => stageCounts[s.name]||0), 1);
+        const colors = ['#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e','#ef4444','#f59e0b','#22c55e','#10b981','#06b6d4','#0ea5e9','#64748b','#ef4444','#dc2626','#991b1b'];
+
+        let h = '';
+        stages.forEach((s, i) => {
+            const count = stageCounts[s.name] || 0;
+            const pct = (count/maxCount*100).toFixed(0);
+            const conv = i > 0 ? ((count / (stageCounts[stages[i-1].name]||1))*100).toFixed(0) + '%' : '100%';
+            h += `<div class="funnel-step">
+                <div class="stage-name">${s.name}</div>
+                <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${colors[i%colors.length]}">${count}</div></div>
+                <div class="conv">${conv}</div>
+            </div>`;
+        });
+        document.getElementById('funnel-area').innerHTML = h;
+    }
+
+    function renderSpeed(d) {
+        const wonOpps = filtered.filter(o => o.status === 'won' && o.days !== null);
+        if (!wonOpps.length) { document.getElementById('speed-grid').innerHTML = '<p style="padding:18px;color:var(--muted)">No closed deals in this period.</p>'; return; }
+
+        const allDays = wonOpps.map(o => o.days);
+        const avg = Math.round(allDays.reduce((a,b)=>a+b,0)/allDays.length);
+        const med = allDays.sort((a,b)=>a-b)[Math.floor(allDays.length/2)];
+        const fastest = Math.min(...allDays);
+        const slowest = Math.max(...allDays);
+
+        document.getElementById('speed-grid').innerHTML = `
+            <div class="speed-card"><div class="big">${avg}</div><div class="unit">days avg</div><div class="desc">Mean time to close</div></div>
+            <div class="speed-card"><div class="big">${med}</div><div class="unit">days median</div><div class="desc">Half close faster</div></div>
+            <div class="speed-card"><div class="big">${fastest}</div><div class="unit">days fastest</div><div class="desc">Quickest close</div></div>
+            <div class="speed-card"><div class="big">${slowest}</div><div class="unit">days slowest</div><div class="desc">Longest close</div></div>
+        `;
+
+        // Per-rep speed
+        const repDays = {};
+        wonOpps.forEach(o => {
+            const uid = o.assignedTo;
+            if (!uid) return;
+            const name = RAW.users[uid] || uid.slice(0,8);
+            if (!repDays[uid]) repDays[uid] = {name, days:[], min:Infinity, max:0};
+            repDays[uid].days.push(o.days);
+            repDays[uid].min = Math.min(repDays[uid].min, o.days);
+            repDays[uid].max = Math.max(repDays[uid].max, o.days);
+        });
+
+        let list = Object.values(repDays).filter(r => r.days.length >= 3 && r.name.length > 8)
+            .map(r => ({...r, avg: Math.round(r.days.reduce((a,b)=>a+b,0)/r.days.length)}))
+            .sort((a,b) => a.avg - b.avg);
+
+        let h = '';
+        list.slice(0,15).forEach(r => {
+            h += `<tr><td class="rep-name">${r.name}</td><td class="r">${r.avg}d</td><td class="r green">${r.min}d</td><td class="r red">${r.max}d</td><td class="r">${r.days.length}</td></tr>`;
+        });
+        document.getElementById('speed-body').innerHTML = h;
+    }
+
+    const GHL_BASE = 'https://app.agmpro.com/v2/location/Fn0W37idNYFzS6gmMcBQ';
+    function contactUrl(cid) { return cid ? `${GHL_BASE}/contacts/detail/${cid}` : '#'; }
+    function staleRow(s, dayColor) {
+        const link = s.contactId ? `<a href="${contactUrl(s.contactId)}" target="_blank" style="color:var(--text);text-decoration:underline;text-underline-offset:2px">${s.name || 'No name'}</a>` : (s.name || 'No name');
+        return `<div class="stale-item"><span>${link} — ${s.repName} — ${s.region} — ${fc(s.value)}</span><span class="days" style="color:${dayColor}">${s.ageDays}d</span></div>`;
+    }
+
+    function renderStale() {
+        const now = new Date();
+        const allOpen = filtered.filter(o => {
+            if (o.status !== 'open' || !o.created) return false;
+            return true;
+        }).map(o => {
+            const days = Math.floor((now - new Date(o.created)) / 86400000);
+            const rep = (o.assignedTo && RAW.users[o.assignedTo]) || 'Unassigned';
+            return {...o, ageDays: days, repName: rep};
+        }).sort((a,b) => b.ageDays - a.ageDays);
+
+        document.getElementById('stale-count').textContent = allOpen.length + ' open';
+
+        let h = '';
+        const critical = allOpen.filter(s => s.ageDays > 60);
+        const warning = allOpen.filter(s => s.ageDays > 30 && s.ageDays <= 60);
+        const watch = allOpen.filter(s => s.ageDays > 14 && s.ageDays <= 30);
+        const fresh = allOpen.filter(s => s.ageDays >= 0 && s.ageDays <= 14);
+
+        if (critical.length) {
+            h += `<div class="stale-alert" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3)">
+                <h3>🔴 Critical (60+ days) — ${critical.length} deals</h3>`;
+            critical.slice(0,10).forEach(s => { h += staleRow(s, 'var(--red)'); });
+            if (critical.length > 10) h += `<div class="stale-item" style="color:var(--muted)">...and ${critical.length-10} more</div>`;
+            h += '</div>';
+        }
+        if (warning.length) {
+            h += `<div class="stale-alert" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.2)">
+                <h3 style="color:var(--orange)">🟡 Warning (30-60 days) — ${warning.length} deals</h3>`;
+            warning.slice(0,10).forEach(s => { h += staleRow(s, 'var(--orange)'); });
+            if (warning.length > 10) h += `<div class="stale-item" style="color:var(--muted)">...and ${warning.length-10} more</div>`;
+            h += '</div>';
+        }
+        if (watch.length) {
+            h += `<div class="stale-alert" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.15)">
+                <h3 style="color:var(--accent)">🔵 Watch (15-30 days) — ${watch.length} deals</h3>`;
+            watch.slice(0,10).forEach(s => { h += staleRow(s, 'var(--accent)'); });
+            if (watch.length > 10) h += `<div class="stale-item" style="color:var(--muted)">...and ${watch.length-10} more</div>`;
+            h += '</div>';
+        }
+        if (fresh.length) {
+            h += `<div class="stale-alert" style="background:rgba(34,197,94,0.06);border-color:rgba(34,197,94,0.15)">
+                <h3 style="color:var(--green)">🟢 Fresh (0-14 days) — ${fresh.length} deals</h3>`;
+            fresh.slice(0,10).forEach(s => { h += staleRow(s, 'var(--green)'); });
+            if (fresh.length > 10) h += `<div class="stale-item" style="color:var(--muted)">...and ${fresh.length-10} more</div>`;
+            h += '</div>';
+        }
+        if (!h) h = '<div style="padding:18px;color:var(--muted)">No open opportunities in this period.</div>';
+        document.getElementById('stale-area').innerHTML = h;
+    }
+
+    // Event handlers
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+
+        document.getElementById('date-filters').addEventListener('click', e => {
+            if (e.target.classList.contains('date-btn')) {
+                document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                applyDateFilter(e.target.dataset.range);
+            }
+        });
+
+        document.getElementById('nav-tabs').addEventListener('click', e => {
+            if (e.target.classList.contains('nav-tab')) {
+                document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                document.getElementById('sec-' + e.target.dataset.tab).classList.add('active');
+                currentTab = e.target.dataset.tab;
+            }
+        });
+
+        document.querySelector('.sort-tabs').addEventListener('click', e => {
+            if (e.target.classList.contains('sort-btn')) {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentSort = e.target.dataset.sort;
+                renderAll();
+            }
+        });
+    });
+    </script>
+</body>
+</html>
